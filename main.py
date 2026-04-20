@@ -4,6 +4,8 @@ from pydantic import BaseModel
 from typing import List
 from dotenv import load_dotenv
 import json
+import matplotlib.pyplot as plt
+import random
 
 # Load API key
 load_dotenv()
@@ -65,7 +67,24 @@ def generate_layout(prompt):
         messages=[
             {
                 "role": "system",
-                "content": "You ONLY return valid JSON. No extra text."
+                "content": """You are a strict JSON generator.
+                Rules:
+                - Output ONLY valid JSON (no text, no explanation)
+                - Follow this schema exactly:
+                {
+                "rooms": [
+                {
+                "x": number,
+                "y": number,
+                "width": number,
+                "height": number
+                }
+                ]
+                }
+                Constraints:
+                - Rooms MUST NOT overlap
+                - Use only numeric values (no strings)
+                """
             },
             {
                 "role": "user",
@@ -82,13 +101,14 @@ def generate_layout(prompt):
 # 3. Validation + Retry
 # ------------------------
 
-def validate_and_fix(prompt, max_retries=3):
+def validate_and_fix(prompt, max_retries=1):
     for attempt in range(max_retries):
         output = generate_layout(prompt)
 
         try:
             data = json.loads(output)
             validated = Layout(**data)
+            validate_no_overlap(validated)
             return validated
 
         except Exception as e:
@@ -112,9 +132,62 @@ Return ONLY corrected JSON.
 # 4. Run
 # ------------------------
 
+
+def draw_layout(layout):
+    fig, ax = plt.subplots()
+
+    max_x = 0
+    max_y = 0
+
+    for i, room in enumerate(layout.rooms):
+        # Random color for each room
+        color = (random.random(), random.random(), random.random())
+
+        rect = plt.Rectangle(
+            (room.x, room.y),
+            room.width,
+            room.height,
+            fill=True,
+            color=color,
+            alpha=0.5,
+            edgecolor='black'
+        )
+
+        ax.add_patch(rect)
+
+        # Label
+        ax.text(
+            room.x + room.width / 2,
+            room.y + room.height / 2,
+            f"Room {i}",
+            ha='center',
+            va='center',
+            fontsize=10,
+            color='black'
+        )
+
+        # Track max bounds
+        max_x = max(max_x, room.x + room.width)
+        max_y = max(max_y, room.y + room.height)
+
+    # Dynamic scaling
+    ax.set_xlim(0, max_x + 2)
+    ax.set_ylim(0, max_y + 2)
+
+    ax.set_aspect('equal')
+    plt.title("AI Generated Layout")
+    plt.grid(True)
+
+    plt.show()
+
 if __name__ == "__main__":
     result = validate_and_fix(
-        "Create a layout with 2 rooms, each 5x4 units, placed side by side."
+        """Create 2 rooms with:
+        - width = 5
+        - height = 4
+        - placed side by side
+        - no overlap"""
     )
     print("✅ Final Output:")
     print(result.model_dump_json(indent=2))
+    draw_layout(result)
