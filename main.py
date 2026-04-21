@@ -16,9 +16,7 @@ client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY")
 )
 
-# ------------------------
-# 1. Define Schema
-# ------------------------
+# Define Schema
 
 class Room(BaseModel):
     x: float
@@ -29,9 +27,7 @@ class Room(BaseModel):
 class Layout(BaseModel):
     rooms: List[Room]
 
-# ------------------------
-# 2. LLM Call
-# ------------------------
+
 
 def rooms_overlap(r1, r2):
     # If one is completely left of the other
@@ -60,6 +56,8 @@ def validate_no_overlap(layout):
         for j in range(i + 1, len(rooms)):
             if rooms_overlap(rooms[i], rooms[j]):
                 raise ValueError(f"Rooms {i} and {j} overlap!")
+            
+# LLM Call
 
 def generate_layout(prompt):
     response = client.chat.completions.create(
@@ -98,7 +96,7 @@ def generate_layout(prompt):
     return response.choices[0].message.content
 
 # ------------------------
-# 3. Validation + Retry
+# Validation + Retry
 # ------------------------
 
 def validate_and_fix(prompt, max_retries=1):
@@ -128,9 +126,7 @@ Return ONLY corrected JSON.
 
     raise Exception("Failed after retries")
 
-# ------------------------
-# 4. Run
-# ------------------------
+
 
 
 def draw_layout(layout):
@@ -179,15 +175,19 @@ def draw_layout(layout):
     plt.grid(True)
 
     plt.show()
-
+#  Run
 if __name__ == "__main__":
     result = validate_and_fix(
         """Create 2 rooms with:
-        - width = 5
-        - height = 4
-        - placed side by side
-        - no overlap"""
+        width =5
+        height =5
+        aligned in a strieght horizontal row
+        equal spacing between rooms 
+        no overlap"""
     )
     print("✅ Final Output:")
     print(result.model_dump_json(indent=2))
+    with open("layout.json", "w") as f:
+        f.write(result.model_dump_json(indent =2))
+    
     draw_layout(result)

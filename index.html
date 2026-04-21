@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Layout Viewer</title>
+</head>
+<body>
+
+<canvas id="canvas" width="600" height="600" style="border:1px solid black;"></canvas>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+fetch("layout.json")
+.then(res => res.json())
+.then(data => {
+
+    let maxX = 0;
+    let maxY = 0;
+
+    // Find boundaries
+    data.rooms.forEach(room => {
+        maxX = Math.max(maxX, room.x + room.width);
+        maxY = Math.max(maxY, room.y + room.height);
+    });
+
+    // Dynamic scale
+    const scaleX = canvas.width / (maxX + 2);
+    const scaleY = canvas.height / (maxY + 2);
+    const scale = Math.min(scaleX, scaleY);
+
+    data.rooms.forEach((room, i) => {
+
+        const x = room.x * scale;
+        const y = room.y * scale;
+        const w = room.width * scale;
+        const h = room.height * scale;
+
+        ctx.fillStyle = "rgba(0, 150, 255, 0.5)";
+        ctx.fillRect(x, y, w, h);
+
+        ctx.strokeRect(x, y, w, h);
+
+        ctx.fillStyle = "black";
+        ctx.fillText("Room " + i, x + 10, y + 20);
+    });
+});
+</script>
+
+</body>
+</html>
